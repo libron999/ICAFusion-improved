@@ -1,0 +1,23 @@
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 虚拟环境
+.venv/
+venv/
+
+# 模型权重（太大，每个几十MB）
+*.model
+
+# 训练结果图片（运行后自己生成）
+results_*/
+models_training_*/
+
+# 系统文件
+.idea/
+.DS_Store
+
+# 实验输出
+ablation_results.csv
+check_sizes.py

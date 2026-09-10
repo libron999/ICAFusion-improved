@@ -5,7 +5,7 @@ from Models import Generator
 import torch
 import os
 from utils import make_floor
-from scipy.misc import imsave
+import imageio #改动
 
 def _generate_fusion_image(G_model, ir_img, vis_img):
     f = G_model(ir_img, vis_img)
@@ -43,10 +43,10 @@ def generate(model,ir_path, vis_path, result,  index,  mode):
     if index<10:
         f_filenames = "100" + str(index) + '.png'
         output_path = result_path + '/'+ f_filenames
-        imsave(output_path, img)
+        imageio.imwrite(output_path, img)#
 
     else:
         f_filenames = "10" + str(index) + '.png'
         output_path = result_path + '/'+ f_filenames
-        imsave(output_path, img)
+        imageio.imwrite(output_path, img)#
 

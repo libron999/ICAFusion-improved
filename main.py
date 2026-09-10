@@ -15,7 +15,7 @@ else:
 
 def load_model(model_path):
     G_model = Generator()
-    G_model.load_state_dict(torch.load(model_path))
+    G_model.load_state_dict(torch.load(model_path,  map_location=torch.device('cpu')))
     print('# generator parameters:', sum(param.numel() for param in G_model.parameters()))
     G_model.eval()
     G_model.cuda()

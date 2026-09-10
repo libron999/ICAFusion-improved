@@ -4,9 +4,11 @@ class args():
 
     datasets_prepared = False
 
-    train_ir = 'E:\clip picture last 128/ir'
-    train_vi = 'E:\clip picture last 128/vi'
-
+    # 训练数据路径（红外和可见光图像文件夹）
+    # 当前使用 test_imgs 下的测试数据作为临时训练数据验证代码
+    # 正式训练时请替换为你的真实训练数据集路径
+    train_ir = r'C:\Users\leoli\PycharmProjects\ICAFusion\test_imgs\ir'
+    train_vi = r'C:\Users\leoli\PycharmProjects\ICAFusion\test_imgs\vi'
 
     hight = 128
     width = 128

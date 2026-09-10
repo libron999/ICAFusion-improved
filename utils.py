@@ -8,8 +8,9 @@ import torch
 from PIL import Image
 from os import listdir
 from os.path import join
-from scipy.misc import imread, imsave, imresize
+import imageio #改动
 from torchvision import transforms
+from skimage.transform import resize#
 
 def load_dataset(ir_imgs_path,vi_imgs_path, BATCH_SIZE, num_imgs=None):
     if num_imgs is None:
@@ -95,22 +96,22 @@ def save_feat(index,C,ir_atten_feat,vi_atten_feat,result_path):
 
         ir_feat_filenames = 'ir_feat_C' + str(c) + '.png'
         ir_atten_path = index_irfeat_path + '/' + ir_feat_filenames
-        imsave(ir_atten_path, feat_ir)
+        imageio.imwrite(ir_atten_path, feat_ir)
 
         vi_feat_filenames = 'vi_feat_C' + str(c) + '.png'
         vi_atten_path = index_vifeat_path + '/' + vi_feat_filenames
-        imsave(vi_atten_path, feat_vi)
+        imageio.imwrite(vi_atten_path, feat_vi)#
 
 
 
 def get_image(path, height=args.hight, width=args.width, mode='L'):
     if mode == 'L':
-        image = imread(path, mode=mode)
+        image = imageio.imread(path, mode=mode)
         image = (image-127.5)/127.5
     elif mode == 'RGB':
         image = Image.open(path).convert('RGB')
     if height is not None and width is not None:
-        image = imresize(image, [height, width], interp='nearest')
+        image = resize(image, (height, width), order=0, preserve_range=True)  # 改动
 
     return image
 
@@ -135,7 +136,7 @@ def get_test_images(paths, height=None, width=None, mode='RGB'):
 def save_images(path, data):
     if data.shape[2] == 1:
         data = data.reshape([data.shape[0], data.shape[1]])
-    imsave(path, data)
+    imageio.imwrite(path, data)
 
 def list_images(directory):
     images = []
