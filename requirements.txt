@@ -1,0 +1,20 @@
+# ICAFusion-Enhanced 依赖清单
+# 注意：AutoDL 镜像已预装 PyTorch 2.8.0 + CUDA 12.8，无需重装 torch
+# 如需在其他环境安装 GPU 版 PyTorch，用：
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# 深度学习框架（AutoDL 镜像已内置，默认注释掉防止覆盖）
+# torch>=2.0
+# torchvision>=0.15
+
+# 图像处理
+Pillow>=10.0
+imageio>=2.31
+scikit-image>=0.21
+
+# 数据处理
+numpy>=1.24
+tqdm>=4.65
+
+# 工具
+tensorboard>=2.13
