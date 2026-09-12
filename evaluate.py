@@ -3,8 +3,8 @@
 计算指标：EN, MI, SD, SF, SSIM, Qabf
 
 用法：
-    python evaluate.py --ir_dir ./test_imgs/tno/ --vis_dir ./test_imgs/tno/ \
-                       --fus_dir ./results_2_260422/ --num 25
+    python evaluate.py --ir_dir ./MSRS/test/ir/ --vis_dir ./MSRS/test/vi/ \
+                       --fus_dir ./results_baseline/ --num 361
 """
 
 import os
@@ -196,11 +196,16 @@ def evaluate_pair(ir_path, vis_path, fus_path):
 
 def main():
     parser = argparse.ArgumentParser(description='Image Fusion Quality Evaluation')
-    parser.add_argument('--ir_dir', default='./test_imgs/tno/', help='红外图像目录')
-    parser.add_argument('--vis_dir', default='./test_imgs/tno/', help='可见光图像目录')
-    parser.add_argument('--fus_dir', default='./results_2_260422/', help='融合结果目录')
-    parser.add_argument('--num', type=int, default=25, help='测试图像对数')
+    parser.add_argument('--ir_dir', default='./MSRS/test/ir/', help='红外图像目录')
+    parser.add_argument('--vis_dir', default='./MSRS/test/vi/', help='可见光图像目录')
+    parser.add_argument('--fus_dir', default='./results_baseline/', help='融合结果目录')
+    parser.add_argument('--num', type=int, default=361, help='测试图像对数（<=0 表示全部）')
     args = parser.parse_args()
+
+    # MSRS：ir 与 vi 文件名一一对应（同名），按文件名排序后按序配对
+    ir_files = sorted(f for f in os.listdir(args.ir_dir) if f.endswith('.png'))
+    if args.num > 0:
+        ir_files = ir_files[:args.num]
 
     results = []
     header = f"{'Idx':>4} | {'EN':>8} | {'MI':>8} | {'SD':>10} | {'SF':>8} | {'SSIM_ir':>8} | {'SSIM_vis':>8} | {'Qabf':>8}"
@@ -210,9 +215,9 @@ def main():
     print(header)
     print(sep)
 
-    for i in range(1, args.num + 1):
-        ir_path = os.path.join(args.ir_dir, f"IR{i}.png")
-        vis_path = os.path.join(args.vis_dir, f"VIS{i}.png")
+    for i, ir_name in enumerate(ir_files, start=1):
+        ir_path = os.path.join(args.ir_dir, ir_name)
+        vis_path = os.path.join(args.vis_dir, ir_name)
         fus_name = f"100{i}.png" if i < 10 else f"10{i}.png"
         fus_path = os.path.join(args.fus_dir, fus_name)
 

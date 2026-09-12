@@ -21,3 +21,6 @@ models_training_*/
 # 实验输出
 ablation_results.csv
 check_sizes.py
+
+# MSRS 数据集（太大，从 https://github.com/Linfeng-Tang/MSRS 单独克隆）
+MSRS/

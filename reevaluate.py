@@ -7,7 +7,8 @@ EXPERIMENTS = [
     "baseline", "hfp_only", "legm_only", "mgdc_only", "ffcm_only", "all_modules"
 ]
 NAMES = ["Baseline", "HFP_only", "LEGM_only", "MGDC_only", "FFCM_only", "All_modules"]
-TEST_IMG_PATH = "./test_imgs/tno/"
+TEST_IR_DIR = "./MSRS/test/ir/"
+TEST_VI_DIR = "./MSRS/test/vi/"
 
 print("=" * 95)
 print("消融实验结果汇总（Qabf 已修复）")
@@ -20,9 +21,11 @@ for name, suffix in zip(NAMES, EXPERIMENTS):
     result_dir = f"results_{suffix}"
     metrics_list = []
 
-    for i in range(1, 26):
-        ir_path = f"{TEST_IMG_PATH}IR{i}.png"
-        vis_path = f"{TEST_IMG_PATH}VIS{i}.png"
+    # MSRS：ir 与 vi 同名对应，按序生成 1001.png / 1010.png ...
+    ir_files = sorted(f for f in os.listdir(TEST_IR_DIR) if f.endswith('.png'))
+    for i, ir_name in enumerate(ir_files, start=1):
+        ir_path = os.path.join(TEST_IR_DIR, ir_name)
+        vis_path = os.path.join(TEST_VI_DIR, ir_name)
         fus_name = f"100{i}.png" if i < 10 else f"10{i}.png"
         fus_path = os.path.join(result_dir, fus_name)
 

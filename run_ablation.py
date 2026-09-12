@@ -22,15 +22,23 @@ from evaluate import evaluate_pair
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 EXPERIMENTS = [
-    {"name": "Baseline",    "suffix": "baseline",    "config": {"use_hfp": False, "use_legm": False, "use_mgdc": False, "use_ffcm": False}, "trained": True},
+    {"name": "Baseline",    "suffix": "baseline",    "config": {"use_hfp": False, "use_legm": False, "use_mgdc": False, "use_ffcm": False}, "trained": False},
     {"name": "HFP_only",    "suffix": "hfp_only",    "config": {"use_hfp": True,  "use_legm": False, "use_mgdc": False, "use_ffcm": False}, "trained": False},
     {"name": "LEGM_only",   "suffix": "legm_only",   "config": {"use_hfp": False, "use_legm": True,  "use_mgdc": False, "use_ffcm": False}, "trained": False},
     {"name": "MGDC_only",   "suffix": "mgdc_only",   "config": {"use_hfp": False, "use_legm": False, "use_mgdc": True,  "use_ffcm": False}, "trained": False},
     {"name": "FFCM_only",   "suffix": "ffcm_only",   "config": {"use_hfp": False, "use_legm": False, "use_mgdc": False, "use_ffcm": True},  "trained": False},
-    {"name": "All_modules", "suffix": "all_modules", "config": {"use_hfp": True,  "use_legm": True,  "use_mgdc": True,  "use_ffcm": True},  "trained": True},
+    {"name": "All_modules", "suffix": "all_modules", "config": {"use_hfp": True,  "use_legm": True,  "use_mgdc": True,  "use_ffcm": True},  "trained": False},
 ]
 
-TEST_IMG_PATH = "./test_imgs/tno/"
+TEST_IR_DIR = "./MSRS/test/ir/"
+TEST_VI_DIR = "./MSRS/test/vi/"
+
+
+def find_final_model(suffix):
+    """找到某个实验最新的 Final_G_Epoch_*.model"""
+    import glob
+    finals = sorted(glob.glob(f"./models_training_5_{suffix}/Final_G_Epoch_*.model"))
+    return finals[-1] if finals else None
 
 
 def train_model(cfg):
@@ -54,11 +62,11 @@ def train_model(cfg):
 
 
 def test_model(cfg):
-    model_path = f"./models_training_5_{cfg['suffix']}/Final_G_Epoch_15.model"
+    model_path = find_final_model(cfg['suffix'])
     result_dir = f"results_{cfg['suffix']}"
 
-    if not os.path.exists(model_path):
-        print(f"[WARN] Model not found: {model_path}, skipping test.")
+    if model_path is None:
+        print(f"[WARN] Model not found for {cfg['name']}, skipping test.")
         return False
 
     os.makedirs(result_dir, exist_ok=True)
@@ -74,10 +82,12 @@ def test_model(cfg):
     print(f"\nTesting: {cfg['name']} -> {result_dir}/")
     with torch.no_grad():
         begin = time.time()
-        for i in range(25):
+        # MSRS：ir 与 vi 同名对应
+        ir_files = sorted(f for f in os.listdir(TEST_IR_DIR) if f.endswith('.png'))
+        for i, ir_name in enumerate(ir_files):
             index = i + 1
-            ir_path = TEST_IMG_PATH + "IR" + str(index) + ".png"
-            vis_path = TEST_IMG_PATH + "VIS" + str(index) + ".png"
+            ir_path = TEST_IR_DIR + ir_name
+            vis_path = TEST_VI_DIR + ir_name
             generate(model, ir_path, vis_path, result_dir, index, mode='L')
         end = time.time()
         print(f"  Test time: {end - begin:.2f}s")
@@ -88,9 +98,11 @@ def evaluate_model(cfg):
     result_dir = f"results_{cfg['suffix']}"
     metrics_list = []
 
-    for i in range(1, 26):
-        ir_path = f"{TEST_IMG_PATH}IR{i}.png"
-        vis_path = f"{TEST_IMG_PATH}VIS{i}.png"
+    # MSRS：ir 与 vi 同名对应
+    ir_files = sorted(f for f in os.listdir(TEST_IR_DIR) if f.endswith('.png'))
+    for i, ir_name in enumerate(ir_files, start=1):
+        ir_path = os.path.join(TEST_IR_DIR, ir_name)
+        vis_path = os.path.join(TEST_VI_DIR, ir_name)
         fus_name = f"100{i}.png" if i < 10 else f"10{i}.png"
         fus_path = os.path.join(result_dir, fus_name)
 
@@ -115,7 +127,7 @@ def evaluate_model(cfg):
 
 def print_summary(results):
     print("\n" + "=" * 95)
-    print("消融实验结果汇总（25对TNO测试集，16 epoch，CPU训练）")
+    print("消融实验结果汇总（MSRS 测试集 361 对）")
     print("=" * 95)
     header = f"{'Config':>14} | {'EN':>7} | {'MI':>7} | {'SD':>7} | {'SF':>7} | {'SSIM_ir':>8} | {'SSIM_vis':>8} | {'Qabf':>8}"
     print(header)
@@ -129,7 +141,7 @@ def print_summary(results):
 
     print("=" * 95)
     print("\n说明：EN/MI/SD/SF/SSIM/Qabf 越高越好")
-    print("      当前数据量仅25对，指标仅供参考\n")
+    print("      测试集为 MSRS 361 对图像\n")
 
 
 def main():
@@ -151,10 +163,10 @@ def main():
     results_summary = []
 
     for cfg in experiments:
-        model_path = f"./models_training_5_{cfg['suffix']}/Final_G_Epoch_15.model"
+        model_path = find_final_model(cfg['suffix'])
 
         # 1. 训练
-        if not args_cli.skip_training and not os.path.exists(model_path):
+        if not args_cli.skip_training and model_path is None:
             try:
                 train_model(cfg)
                 cfg['trained'] = True
@@ -163,7 +175,7 @@ def main():
                 results_summary.append(None)
                 continue
         else:
-            if os.path.exists(model_path):
+            if model_path is not None:
                 print(f"\n[SKIP] Model already exists: {model_path}")
                 cfg['trained'] = True
 

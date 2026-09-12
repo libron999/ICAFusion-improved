@@ -4,11 +4,10 @@ class args():
 
     datasets_prepared = False
 
-    # 训练数据路径（红外和可见光图像文件夹）
-    # 当前使用 test_imgs 下的测试数据作为临时训练数据验证代码
-    # 正式训练时请替换为你的真实训练数据集路径
-    train_ir = r'C:\Users\leoli\PycharmProjects\ICAFusion\test_imgs\ir'
-    train_vi = r'C:\Users\leoli\PycharmProjects\ICAFusion\test_imgs\vi'
+    # 训练数据路径（MSRS 数据集，ir 与 vi 文件名一一对应）
+    # train 1083 对 / test 361 对，图像原始尺寸 640x480
+    train_ir = './MSRS/train/ir'
+    train_vi = './MSRS/train/vi'
 
     hight = 128
     width = 128

@@ -81,8 +81,9 @@ def main():
     else:
         # -------------------- 测试模式 --------------------
         print("\nBegin to generate pictures ...\n")
-        test_imgs_path = "./test_imgs/tno/"
-        print('TNO dataset begin to test')
+        test_ir_dir = "./MSRS/test/ir/"
+        test_vi_dir = "./MSRS/test/vi/"
+        print('MSRS dataset begin to test')
 
         if USE_ENHANCED:
             from Models_enhanced import Generator_Enhanced
@@ -103,11 +104,13 @@ def main():
 
         with torch.no_grad():
             from generate_enhanced import generate
+            # 扫描 MSRS 测试集，ir 与 vi 文件名一一对应（同名）
+            ir_files = sorted(f for f in os.listdir(test_ir_dir) if f.endswith('.png'))
             begin = time.time()
-            for i in range(25):
+            for i, ir_name in enumerate(ir_files):
                 index = i + 1
-                ir_path = test_imgs_path + "IR" + str(index) + ".png"
-                vis_path = test_imgs_path + "VIS" + str(index) + ".png"
+                ir_path = test_ir_dir + ir_name
+                vis_path = test_vi_dir + ir_name
                 generate(model, ir_path, vis_path, RESULT_DIR, index, mode='L')
             end = time.time()
             print("consumption time of generating:%s " % (end - begin))
