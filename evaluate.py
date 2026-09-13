@@ -13,14 +13,11 @@ import numpy as np
 from PIL import Image
 
 
-def read_gray(path, size=(128, 128)):
-    """读取灰度图像为 numpy 数组，resize 到指定尺寸，值域 [0, 255]"""
+def read_gray(path, size=None):
+    """读取灰度图像为 numpy 数组，默认保持原图分辨率，值域 [0, 255]"""
     img = Image.open(path).convert('L')
     if size is not None:
         img = img.resize(size, Image.NEAREST)
-    return np.array(img, dtype=np.float64)
-    """读取灰度图像为 numpy 数组，值域 [0, 255]"""
-    img = Image.open(path).convert('L')
     return np.array(img, dtype=np.float64)
 
 

@@ -1,4 +1,3 @@
-from args import args
 import utils_enhanced as utils
 from torch.autograd import Variable
 from Models_enhanced import Generator_Enhanced
@@ -39,11 +38,11 @@ def load_model(model_path, use_hfp=False, use_legm=False, use_mgdc=False, use_ff
 def generate(model, ir_path, vis_path, result, index, mode):
     """
     对单对图像进行融合，并保存结果。
-    测试时使用与训练相同的尺寸 (128x128) 以确保兼容性。
+    测试时使用原图全分辨率（与原始 ICAFusion 一致），生成器为全卷积结构可自适应。
     """
-    # 使用训练时相同的尺寸读取图像
-    ir_img = utils.get_test_images(ir_path, height=args.hight, width=args.width, mode=mode)
-    vis_img = utils.get_test_images(vis_path, height=args.hight, width=args.width, mode=mode)
+    # 不缩放，保持原图分辨率（原始 generate.py 的行为）
+    ir_img = utils.get_test_images(ir_path, mode=mode)
+    vis_img = utils.get_test_images(vis_path, mode=mode)
     ir_img = ir_img.to(device)
     vis_img = vis_img.to(device)
     ir_img = Variable(ir_img, requires_grad=False)
