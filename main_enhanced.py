@@ -29,9 +29,12 @@ USE_FFCM = False    # 融合傅里叶卷积混合器
 SAVE_SUFFIX = "baseline"
 
 # 测试时加载的模型路径
-TEST_MODEL_PATH = "./models_training_5_baseline/Final_G_Epoch_15.model"
+TEST_MODEL_PATH = "./models_training_5_baseline/Final_G_Epoch_49.model"
 # 测试结果保存目录
 RESULT_DIR = "results_baseline"
+
+# 测试数据集选择："MSRS"（361对，同名配对）或 "TNO"（25对，IR{i}/VIS{i}命名）
+TEST_DATASET = "TNO"
 # =================================================
 
 
@@ -81,9 +84,21 @@ def main():
     else:
         # -------------------- 测试模式 --------------------
         print("\nBegin to generate pictures ...\n")
-        test_ir_dir = "./MSRS/test/ir/"
-        test_vi_dir = "./MSRS/test/vi/"
-        print('MSRS dataset begin to test')
+
+        # 按配置构建测试图像对列表
+        if TEST_DATASET == "MSRS":
+            test_ir_dir = "./MSRS/test/ir/"
+            test_vi_dir = "./MSRS/test/vi/"
+            ir_files = sorted(f for f in os.listdir(test_ir_dir) if f.endswith('.png'))
+            pairs = [(test_ir_dir + f, test_vi_dir + f) for f in ir_files]
+        else:  # TNO：IR{i}.png / VIS{i}.png，跳过不存在的编号
+            test_dir = "./test_imgs/tno/"
+            pairs = []
+            for i in range(1, 100):
+                ir_p = test_dir + f"IR{i}.png"
+                if os.path.exists(ir_p):
+                    pairs.append((ir_p, test_dir + f"VIS{i}.png"))
+        print(f'{TEST_DATASET} dataset begin to test, {len(pairs)} pairs')
 
         if USE_ENHANCED:
             from Models_enhanced import Generator_Enhanced
@@ -104,13 +119,8 @@ def main():
 
         with torch.no_grad():
             from generate_enhanced import generate
-            # 扫描 MSRS 测试集，ir 与 vi 文件名一一对应（同名）
-            ir_files = sorted(f for f in os.listdir(test_ir_dir) if f.endswith('.png'))
             begin = time.time()
-            for i, ir_name in enumerate(ir_files):
-                index = i + 1
-                ir_path = test_ir_dir + ir_name
-                vis_path = test_vi_dir + ir_name
+            for index, (ir_path, vis_path) in enumerate(pairs, start=1):
                 generate(model, ir_path, vis_path, RESULT_DIR, index, mode='L')
             end = time.time()
             print("consumption time of generating:%s " % (end - begin))
