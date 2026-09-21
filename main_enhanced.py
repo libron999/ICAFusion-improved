@@ -18,6 +18,10 @@ flag = 0
 # 是否使用增强版模型
 USE_ENHANCED = True
 
+# RGB三通道开关：True=彩色（红外图自动复制为三通道，输出彩色融合图）
+# False=原始灰度（兼容所有旧权重）
+COLOR = True
+
 # 增强模块开关（仅在 USE_ENHANCED=True 时有效）
 # 全部关闭 = 原始 ICAFusion Baseline
 USE_HFP = False     # 高频感知模块
@@ -26,15 +30,15 @@ USE_MGDC = False    # 多尺度分组空洞卷积
 USE_FFCM = False    # 融合傅里叶卷积混合器
 
 # 模型保存后缀（用于区分不同实验）
-SAVE_SUFFIX = "baseline"
+SAVE_SUFFIX = "baseline_rgb" if COLOR else "baseline"
 
 # 测试时加载的模型路径
-TEST_MODEL_PATH = "./models_training_5_baseline/Final_G_Epoch_49.model"
+TEST_MODEL_PATH = "./models_training_5_baseline_rgb/Final_G_Epoch_49.model"
 # 测试结果保存目录
-RESULT_DIR = "results_baseline"
+RESULT_DIR = "results_baseline_rgb"
 
 # 测试数据集选择："MSRS"（361对，同名配对）或 "TNO"（25对，IR{i}/VIS{i}命名）
-TEST_DATASET = "TNO"
+TEST_DATASET = "MSRS"
 # =================================================
 
 
@@ -73,7 +77,8 @@ def main():
                 use_legm=USE_LEGM,
                 use_mgdc=USE_MGDC,
                 use_ffcm=USE_FFCM,
-                save_suffix=SAVE_SUFFIX
+                save_suffix=SAVE_SUFFIX,
+                color=COLOR
             )
         else:
             from Models import Generator
@@ -106,7 +111,8 @@ def main():
                 use_hfp=USE_HFP,
                 use_legm=USE_LEGM,
                 use_mgdc=USE_MGDC,
-                use_ffcm=USE_FFCM
+                use_ffcm=USE_FFCM,
+                in_channels=3 if COLOR else 1
             )
         else:
             from Models import Generator
@@ -119,9 +125,10 @@ def main():
 
         with torch.no_grad():
             from generate_enhanced import generate
+            img_mode = 'RGB' if COLOR else 'L'
             begin = time.time()
             for index, (ir_path, vis_path) in enumerate(pairs, start=1):
-                generate(model, ir_path, vis_path, RESULT_DIR, index, mode='L')
+                generate(model, ir_path, vis_path, RESULT_DIR, index, mode=img_mode)
             end = time.time()
             print("consumption time of generating:%s " % (end - begin))
 

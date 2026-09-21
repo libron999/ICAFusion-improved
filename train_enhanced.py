@@ -29,26 +29,30 @@ def reset_grad(g_optimizer, dir_optimizer, dvi_optimizer):
 
 def train(train_data_ir, train_data_vi,
           use_hfp=False, use_legm=False, use_mgdc=False, use_ffcm=False,
-          save_suffix="enhanced"):
+          save_suffix="enhanced", color=False):
     """
     训练函数，支持传入模块开关参数。
     save_suffix: 模型保存目录后缀，用于区分不同实验配置
+    color: True=RGB三通道训练（红外图自动复制为三通道），False=原始灰度
     """
     models_save_path = make_floor(os.getcwd(), args.save_model_dir + "_" + save_suffix)
     print(models_save_path)
     loss_save_path = make_floor(models_save_path, args.save_loss_dir)
     print(loss_save_path)
 
+    ch = 3 if color else 1
+
     # 初始化增强版生成器
     G = Generator_Enhanced(
         use_hfp=use_hfp,
         use_legm=use_legm,
         use_mgdc=use_mgdc,
-        use_ffcm=use_ffcm
+        use_ffcm=use_ffcm,
+        in_channels=ch
     ).to(device)
 
-    D_ir = D_IR().to(device)
-    D_vi = D_VI().to(device)
+    D_ir = D_IR(in_channels=ch).to(device)
+    D_vi = D_VI(in_channels=ch).to(device)
     g_content_criterion = g_content_loss().to(device)
 
     optimizerG = optim.Adam(G.parameters(), args.g_lr)
@@ -60,6 +64,7 @@ def train(train_data_ir, train_data_vi,
     print(f"use_legm = {use_legm}")
     print(f"use_mgdc = {use_mgdc}")
     print(f"use_ffcm = {use_ffcm}")
+    print(f"color    = {color} (channels={ch})")
     print(f"Total G params: {sum(p.numel() for p in G.parameters())}")
     print("===============================\n")
 
@@ -93,7 +98,7 @@ def train(train_data_ir, train_data_vi,
         for batch in range(batches):
             count += 1
             reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
-            img_model = 'L'
+            img_model = 'RGB' if color else 'L'
 
             image_paths_ir = image_set_ir[batch * batch_size:(batch * batch_size + batch_size)]
             image_paths_vi = image_set_vi[batch * batch_size:(batch * batch_size + batch_size)]

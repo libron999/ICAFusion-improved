@@ -21,13 +21,27 @@ from evaluate import evaluate_pair
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# ==================== 配置 ====================
+# RGB三通道开关（与 main_enhanced.py 的 COLOR 保持一致）
+# True=彩色训练/测试（红外复制为三通道，模型目录与结果目录自动加 _rgb 后缀）
+COLOR = True
+IMG_MODE = 'RGB' if COLOR else 'L'
+CH = 3 if COLOR else 1
+
+
+def sfx(suffix):
+    """彩色模式下模型/结果目录统一加 _rgb 后缀，避免与灰度实验混淆"""
+    return suffix + "_rgb" if COLOR else suffix
+# ==============================================
+
+
 EXPERIMENTS = [
-    {"name": "Baseline",    "suffix": "baseline",    "config": {"use_hfp": False, "use_legm": False, "use_mgdc": False, "use_ffcm": False}, "trained": False},
-    {"name": "HFP_only",    "suffix": "hfp_only",    "config": {"use_hfp": True,  "use_legm": False, "use_mgdc": False, "use_ffcm": False}, "trained": False},
-    {"name": "LEGM_only",   "suffix": "legm_only",   "config": {"use_hfp": False, "use_legm": True,  "use_mgdc": False, "use_ffcm": False}, "trained": False},
-    {"name": "MGDC_only",   "suffix": "mgdc_only",   "config": {"use_hfp": False, "use_legm": False, "use_mgdc": True,  "use_ffcm": False}, "trained": False},
-    {"name": "FFCM_only",   "suffix": "ffcm_only",   "config": {"use_hfp": False, "use_legm": False, "use_mgdc": False, "use_ffcm": True},  "trained": False},
-    {"name": "All_modules", "suffix": "all_modules", "config": {"use_hfp": True,  "use_legm": True,  "use_mgdc": True,  "use_ffcm": True},  "trained": False},
+    {"name": "Baseline",    "suffix": "baseline",    "config": {"use_hfp": False, "use_legm": False, "use_mgdc": False, "use_ffcm": False, "in_channels": CH}, "trained": False},
+    {"name": "HFP_only",    "suffix": "hfp_only",    "config": {"use_hfp": True,  "use_legm": False, "use_mgdc": False, "use_ffcm": False, "in_channels": CH}, "trained": False},
+    {"name": "LEGM_only",   "suffix": "legm_only",   "config": {"use_hfp": False, "use_legm": True,  "use_mgdc": False, "use_ffcm": False, "in_channels": CH}, "trained": False},
+    {"name": "MGDC_only",   "suffix": "mgdc_only",   "config": {"use_hfp": False, "use_legm": False, "use_mgdc": True,  "use_ffcm": False, "in_channels": CH}, "trained": False},
+    {"name": "FFCM_only",   "suffix": "ffcm_only",   "config": {"use_hfp": False, "use_legm": False, "use_mgdc": False, "use_ffcm": True,  "in_channels": CH}, "trained": False},
+    {"name": "All_modules", "suffix": "all_modules", "config": {"use_hfp": True,  "use_legm": True,  "use_mgdc": True,  "use_ffcm": True,  "in_channels": CH}, "trained": False},
 ]
 
 TEST_IR_DIR = "./MSRS/test/ir/"
@@ -57,13 +71,14 @@ def train_model(cfg):
         use_legm=cfg['config']['use_legm'],
         use_mgdc=cfg['config']['use_mgdc'],
         use_ffcm=cfg['config']['use_ffcm'],
-        save_suffix=cfg['suffix']
+        save_suffix=sfx(cfg['suffix']),
+        color=COLOR
     )
 
 
 def test_model(cfg):
-    model_path = find_final_model(cfg['suffix'])
-    result_dir = f"results_{cfg['suffix']}"
+    model_path = find_final_model(sfx(cfg['suffix']))
+    result_dir = f"results_{sfx(cfg['suffix'])}"
 
     if model_path is None:
         print(f"[WARN] Model not found for {cfg['name']}, skipping test.")
@@ -88,14 +103,14 @@ def test_model(cfg):
             index = i + 1
             ir_path = TEST_IR_DIR + ir_name
             vis_path = TEST_VI_DIR + ir_name
-            generate(model, ir_path, vis_path, result_dir, index, mode='L')
+            generate(model, ir_path, vis_path, result_dir, index, mode=IMG_MODE)
         end = time.time()
         print(f"  Test time: {end - begin:.2f}s")
     return True
 
 
 def evaluate_model(cfg):
-    result_dir = f"results_{cfg['suffix']}"
+    result_dir = f"results_{sfx(cfg['suffix'])}"
     metrics_list = []
 
     # MSRS：ir 与 vi 同名对应
@@ -127,7 +142,7 @@ def evaluate_model(cfg):
 
 def print_summary(results):
     print("\n" + "=" * 95)
-    print("消融实验结果汇总（MSRS 测试集 361 对）")
+    print(f"消融实验结果汇总（MSRS 测试集 361 对，{'RGB三通道' if COLOR else '灰度'}）")
     print("=" * 95)
     header = f"{'Config':>14} | {'EN':>7} | {'MI':>7} | {'SD':>7} | {'SF':>7} | {'SSIM_ir':>8} | {'SSIM_vis':>8} | {'Qabf':>8}"
     print(header)
@@ -163,7 +178,7 @@ def main():
     results_summary = []
 
     for cfg in experiments:
-        model_path = find_final_model(cfg['suffix'])
+        model_path = find_final_model(sfx(cfg['suffix']))
 
         # 1. 训练
         if not args_cli.skip_training and model_path is None:

@@ -554,19 +554,22 @@ class Generator_Enhanced(nn.Module):
       use_mgdc : 是否用 MGDC 替换部分编码器卷积（conv3/conv4/conv5）
       use_ffcm : 是否在交互注意力后添加 FFCM 全局频域混合
     """
-    def __init__(self, use_hfp=False, use_legm=False, use_mgdc=False, use_ffcm=False):
+    def __init__(self, use_hfp=False, use_legm=False, use_mgdc=False, use_ffcm=False,
+                 in_channels=1):
         super(Generator_Enhanced, self).__init__()
         self.use_hfp = use_hfp
         self.use_legm = use_legm
         self.use_mgdc = use_mgdc
         self.use_ffcm = use_ffcm
+        self.in_channels = in_channels
 
         self.encoder_pad = nn.ReflectionPad2d([1, 1, 1, 1])
         kernel_size_2 = 3
 
         # ---------- 编码器 ----------
-        self.conv1 = ConvLayer(2, 16, kernel_size=3, stride=1, use_relu=True)
-        self.conv2 = ConvLayer(1, 16, kernel_size=3, stride=1, use_relu=True)
+        # 输入为 ir 与 vis 沿通道维拼接：2*in_channels（RGB 模式下各 3 通道）
+        self.conv1 = ConvLayer(2 * in_channels, 16, kernel_size=3, stride=1, use_relu=True)
+        self.conv2 = ConvLayer(in_channels, 16, kernel_size=3, stride=1, use_relu=True)
 
         if self.use_mgdc:
             # MGDC 替换 conv3/conv4/conv5，增强多尺度特征提取
@@ -615,7 +618,7 @@ class Generator_Enhanced(nn.Module):
         self.conv9 = ConvLayer(192, 192, 3, stride=1, use_relu=True)
         self.conv10 = ConvLayer(192, 64, kernel_size_2, stride=1, use_relu=True)
         self.conv11 = ConvLayer(96, 32, kernel_size_2, stride=1, use_relu=True)
-        self.conv12 = ConvLayer(32, 1, kernel_size_2, stride=1, use_relu=False)
+        self.conv12 = ConvLayer(32, in_channels, kernel_size_2, stride=1, use_relu=False)
 
         # ---------- 可选模块：LEGM 增强解码器 ----------
         if self.use_legm:
@@ -726,9 +729,9 @@ class Generator_Enhanced(nn.Module):
 # ============================================================================
 
 class D_IR(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=1):
         super(D_IR, self).__init__()
-        fliter = [1, 16, 32, 64, 128]
+        fliter = [in_channels, 16, 32, 64, 128]
         kernel_size = 3
         stride = 2
         self.l1 = ConvLayer_dis(fliter[0], fliter[1], kernel_size, stride, use_relu=True)
@@ -749,9 +752,9 @@ class D_IR(nn.Module):
 
 
 class D_VI(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=1):
         super(D_VI, self).__init__()
-        fliter = [1, 16, 32, 64, 128]
+        fliter = [in_channels, 16, 32, 64, 128]
         kernel_size = 3
         stride = 2
         self.l1 = ConvLayer_dis(fliter[0], fliter[1], kernel_size, stride, use_relu=True)

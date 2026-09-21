@@ -20,13 +20,15 @@ def _generate_fusion_image(G_model, ir_img, vis_img):
     return f
 
 
-def load_model(model_path, use_hfp=False, use_legm=False, use_mgdc=False, use_ffcm=False):
+def load_model(model_path, use_hfp=False, use_legm=False, use_mgdc=False, use_ffcm=False,
+               in_channels=1):
     """加载训练好的增强版生成器权重"""
     G_model = Generator_Enhanced(
         use_hfp=use_hfp,
         use_legm=use_legm,
         use_mgdc=use_mgdc,
-        use_ffcm=use_ffcm
+        use_ffcm=use_ffcm,
+        in_channels=in_channels
     )
     G_model.load_state_dict(torch.load(model_path), strict=False)
     print('# generator parameters:', sum(p.numel() for p in G_model.parameters()))
@@ -51,8 +53,11 @@ def generate(model, ir_path, vis_path, result, index, mode):
     img_fusion = _generate_fusion_image(model, ir_img, vis_img)
     img_fusion = (img_fusion / 2 + 0.5) * 255
 
-    # 取 batch 第 0 张，去掉单通道维度，得到 [H, W]
-    img = img_fusion[0].squeeze().cpu().clamp(0, 255).numpy()
+    # 取 batch 第 0 张。灰度输出为 [1,H,W]，彩色输出为 [3,H,W] 需转 [H,W,3]
+    img = img_fusion[0].detach().cpu().clamp(0, 255).numpy()
+    if img.ndim == 3:
+        img = img.transpose(1, 2, 0)
+    img = img.astype(np.uint8)
 
     result_path = make_floor(os.getcwd(), result)
 
@@ -62,4 +67,4 @@ def generate(model, ir_path, vis_path, result, index, mode):
         f_filenames = "10" + str(index) + '.png'
 
     output_path = result_path + '/' + f_filenames
-    Image.fromarray(img.astype(np.uint8)).save(output_path)
+    Image.fromarray(img).save(output_path)
