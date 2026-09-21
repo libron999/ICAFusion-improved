@@ -739,6 +739,10 @@ class D_IR(nn.Module):
         self.l3 = ConvLayer_dis(fliter[2], fliter[3], kernel_size, stride, use_relu=True)
         self.l4 = ConvLayer_dis(fliter[3], fliter[4], kernel_size, stride, use_relu=True)
         self.tanh = nn.Tanh()
+        # 修复原版 bug：Linear 原来每次 forward 都新建随机权重、从未被训练。
+        # 改为首次 forward 时实例化并持久保存（训练代码会先用 dummy 输入预热，
+        # 确保创建优化器前该层已注册）
+        self.linear = None
 
     def forward(self, x):
         out = self.l1(x)
@@ -746,8 +750,9 @@ class D_IR(nn.Module):
         out = self.l3(out)
         out = self.l4(out)
         out = out.view(out.size()[0], -1)
-        linear = nn.Linear(out.size()[1], 1).to(device)
-        out = self.tanh(linear(out))
+        if self.linear is None:
+            self.linear = nn.Linear(out.size(1), 1).to(out.device)
+        out = self.tanh(self.linear(out))
         return out.squeeze()
 
 
@@ -762,6 +767,8 @@ class D_VI(nn.Module):
         self.l3 = ConvLayer_dis(fliter[2], fliter[3], kernel_size, stride, use_relu=True)
         self.l4 = ConvLayer_dis(fliter[3], fliter[4], kernel_size, stride, use_relu=True)
         self.tanh = nn.Tanh()
+        # 同 D_IR：Linear 延迟持久化
+        self.linear = None
 
     def forward(self, x):
         out = self.l1(x)
@@ -769,6 +776,7 @@ class D_VI(nn.Module):
         out = self.l3(out)
         out = self.l4(out)
         out = out.view(out.size()[0], -1)
-        linear = nn.Linear(out.size()[1], 1).to(device)
-        out = self.tanh(linear(out))
+        if self.linear is None:
+            self.linear = nn.Linear(out.size(1), 1).to(out.device)
+        out = self.tanh(self.linear(out))
         return out.squeeze()
