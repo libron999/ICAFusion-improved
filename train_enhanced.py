@@ -90,7 +90,7 @@ def train(train_data_ir, train_data_vi,
     all_L1_loss_lst = []
     g_loss_lst = []
 
-    nan_skips = 0  # NaN 守卫跳过的更新步数统计
+    nan_skips_dvi = 0  # NaN 守卫跳过的更新步数统计（按更新类型分）
 
     all_ir_d_loss = 0
     all_vi_d_loss = 0
@@ -151,14 +151,19 @@ def train(train_data_ir, train_data_vi,
 
                 vi_d_loss = D_loss_vi + D_loss_f + Dvi_penalty * gamma_
                 if not _finite(vi_d_loss):
-                    nan_skips += 1
+                    nan_skips_dvi += 1
                     reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
                     continue
                 all_vi_d_loss += vi_d_loss.item()
 
                 reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
                 vi_d_loss.backward(retain_graph=True)
-                torch.nn.utils.clip_grad_norm_(D_vi.parameters(), max_norm=5.0)
+                gn = torch.nn.utils.clip_grad_norm_(D_vi.parameters(), max_norm=5.0)
+                if not torch.isfinite(gn):
+                    # 损失有限但梯度NaN（权重污染的唯一残留通道），跳过本步
+                    nan_skips_dvi += 1
+                    reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
+                    continue
                 optimizerD_vi.step()
 
             # ---------- 更新 D_ir ----------
@@ -183,14 +188,18 @@ def train(train_data_ir, train_data_vi,
 
                 ir_d_loss = D_loss_ir + D_loss_f + Dir_penalty * gamma_
                 if not _finite(ir_d_loss):
-                    nan_skips += 1
+                    nan_skips_dir += 1
                     reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
                     continue
                 all_ir_d_loss += ir_d_loss.item()
 
                 reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
                 ir_d_loss.backward(retain_graph=True)
-                torch.nn.utils.clip_grad_norm_(D_ir.parameters(), max_norm=5.0)
+                gn = torch.nn.utils.clip_grad_norm_(D_ir.parameters(), max_norm=5.0)
+                if not torch.isfinite(gn):
+                    nan_skips_dir += 1
+                    reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
+                    continue
                 optimizerD_ir.step()
 
             # ---------- 更新 G ----------
@@ -204,7 +213,7 @@ def train(train_data_ir, train_data_vi,
             g_loss = lambda_ * g_adversarial_loss + content_loss
 
             if not _finite(g_loss):
-                nan_skips += 1
+                nan_skips_g += 1
                 reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
                 continue
             all_F_loss += F_loss.item()
@@ -214,7 +223,11 @@ def train(train_data_ir, train_data_vi,
 
             reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
             g_loss.backward()
-            torch.nn.utils.clip_grad_norm_(G.parameters(), max_norm=5.0)
+            gn = torch.nn.utils.clip_grad_norm_(G.parameters(), max_norm=5.0)
+            if not torch.isfinite(gn):
+                nan_skips_g += 1
+                reset_grad(optimizerG, optimizerD_ir, optimizerD_vi)
+                continue
             optimizerG.step()
 
             if (batch + 1) % args.log_interval == 0:
@@ -245,9 +258,11 @@ def train(train_data_ir, train_data_vi,
                 all_content_loss = 0.
                 all_F_loss = 0
 
-        if nan_skips > 0:
-            print(f"[WARN] epoch {epoch}: 跳过 {nan_skips} 个 NaN/Inf 更新步（梯度裁剪+守卫已拦截）")
-            nan_skips = 0
+        total_skips = nan_skips_dvi + nan_skips_dir + nan_skips_g
+        if total_skips > 0:
+            print(f"[WARN] epoch {epoch}: 跳过 {total_skips} 个 NaN/Inf 更新步 "
+                  f"(D_vi:{nan_skips_dvi} D_ir:{nan_skips_dir} G:{nan_skips_g})")
+            nan_skips_dvi = nan_skips_dir = nan_skips_g = 0
 
         # ----- 保存模型 -----
         if (epoch + 1) % args.log_iter == 0:
