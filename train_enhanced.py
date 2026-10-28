@@ -91,6 +91,8 @@ def train(train_data_ir, train_data_vi,
     g_loss_lst = []
 
     nan_skips_dvi = 0  # NaN 守卫跳过的更新步数统计（按更新类型分）
+    nan_skips_dir = 0
+    nan_skips_g = 0
 
     all_ir_d_loss = 0
     all_vi_d_loss = 0
